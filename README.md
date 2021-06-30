@@ -1,4 +1,10 @@
-# References
+# Description
+There are 2 implementations Without OpenCV ans with OpenCV
+### Instructions
+### Files
+main.cpp contatins Opencv implementation and similar implementation is done the other program Without Opencv.
+### Block Diagram
+### References
 1. https://en.wikipedia.org/wiki/Sum_of_absolute_differences
 2. https://vision.middlebury.edu/stereo/data/scenes2003/
 3. https://www.hindawi.com/journals/js/2016/8742920/#EEq3

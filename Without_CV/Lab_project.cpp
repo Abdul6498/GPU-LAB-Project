@@ -1,20 +1,5 @@
-#include <stdio.h>
 
-#include <Core/Assert.hpp>
-#include <Core/Time.hpp>
-#include <Core/Image.hpp>
-#include <OpenCL/cl-patched.hpp>
-#include <OpenCL/Program.hpp>
-#include <OpenCL/Event.hpp>
-#include <OpenCL/Device.hpp>
-
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <cmath>
-#include <utility>
-
-#include <boost/lexical_cast.hpp>
+#include <vec_operation.h>
 
 #define LOG(x) std::cout << x << std::endl;
 #define LOG_w(x) std::cout << x << " , ";
@@ -26,75 +11,6 @@ unsigned volatile kernel_size = 3;     //Kernel Size for averging filter
 size_t window = 10;
 std::pair<float, float> src(0, 50), dst(0, 1);
 
-template<typename tVal>
-tVal map_value(std::pair<tVal, tVal> src, std::pair<tVal, tVal> dst, tVal val)
-{
-	return(src.first + ((dst.second - dst.first) / (src.second - src.first)) * (val - src.first));
-}
-
-int getIndexGlobal(std::size_t countX, int i, int j) {
-	return j * countX + i;
-}
-
-
-float getValueGlobal(const std::vector<float>& img, std::size_t countX, std::size_t countY, int i, int j) {
-	if (i < 0 || (size_t)i >= countX || j < 0 || (size_t)j >= countY)
-		return 0;
-	else
-		return img[getIndexGlobal(countX, i, j)];
-}
-template<typename T>
-T Rect(T& in_image, int x, int y, size_t window, int countX, int countY, T& rect)
-{
-	size_t pi = 0;
-	size_t pj = 0;
-	for (int i = x; i < (x + window); i++) {
-		for (int j = y; j < (y + window); j++) {
-			rect[pj + window * pi] = getValueGlobal(in_image, countX, countY, i, j);
-			pj++;
-		}
-		pj = 0;
-		pi++;
-	}
-	return rect;
-}
-template<typename T>
-T vec_multiply(T & vec1, T & vec2, T & vec_out, size_t window) {
-	for (int i = 0; i < (window* window); i++)
-	{
-		vec_out[i] = vec1[i] * vec2[i];
-	}
-	return vec_out;
-}
-
-template<typename T>
-T vec_addition(T& vec1, T& vec2, T& vec_out, size_t window) {
-	for (int i = 0; i < (window* window); i++)
-	{
-		vec_out[i] = vec1[i] + vec2[i];
-	}
-	return vec_out;
-}
-
-template<typename T>
-T vec_subtract(T& vec1 , T& vec2, T& vec_out, size_t window) {
-	for (int i = 0; i < (window* window); i++)
-	{
-		vec_out[i] = std::abs(vec1[i] - vec2[i]);
-	}
-	return vec_out;
-}
-
-template<typename T>
-float vec_sum(T& vec1, size_t window) {
-	float sum = 0;
-	for (int i = 0; i < (window * window); i++)
-	{
-		sum = vec1[i] + sum;
-	}
-	return sum;
-}
-
 template<typename tt>
 tt SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
@@ -104,14 +20,14 @@ tt SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 	std::vector<float> diff(count);
 	float sum;
 	float disparity = 0;
-	for (int i = 48; i < (int)countX ; i++) {
+	for (int i = 48; i < (int)countX; i++) {
 		for (int j = 0; j < (int)countY; j++) {
 			float min = 10000.01;
-			Rect<std::vector<float>>(imageL, i, j, window, countX, countY, L);
+			vec::Rect<std::vector<float>>(imageL, i, j, window, countX, countY, L);
 			for (int t = i - 48; t < i; t++) {
-				Rect<std::vector<float>>(imageR, t, j, window, countX, countY, R);
-				vec_subtract<std::vector<float>>(L, R, diff, window);
-				sum = vec_sum<std::vector<float>>(diff, window);
+				vec::Rect<std::vector<float>>(imageR, t, j, window, countX, countY, R);
+				vec::vec_subtract<std::vector<float>>(L, R, diff, window);
+				sum = vec::vec_sum<std::vector<float>>(diff, window);
 				if (min > sum) {
 					min = sum;
 					disparity = i - t;
@@ -119,9 +35,9 @@ tt SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 					//  point_t = t;
 				}
 			}
-			
-			disparity = map_value(src, dst, disparity);
-			disp_img[getIndexGlobal(countX, i, j)] = disparity;
+
+			disparity = vec::map_value(src, dst, disparity);
+			disp_img[vec::getIndexGlobal(countX, i, j)] = disparity;
 		}
 	}
 	return disp_img;
@@ -144,15 +60,15 @@ tt NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 		for (int j = 0; j < (int)countY; j++) 
 		{
 			float max = 0.000001;
-			Rect<std::vector<float>>(imageL, i, j, window, countX, countY, L);
+			vec::Rect<std::vector<float>>(imageL, i, j, window, countX, countY, L);
 			for (int t = i - 48; t < i; t++) 
 			{
-				Rect<std::vector<float>>(imageR, t, j, window, countX, countY, R);
-				vec_multiply(L, R, prod, window);
-				auto summ = vec_sum<std::vector<float>>(prod, window);
-				vec_multiply(L, L, L_sq, window);
-				vec_multiply(R, R, R_sq, window);
-				auto denom = std::sqrt(vec_sum<std::vector<float>>(L_sq,window) * vec_sum<std::vector<float>>(R_sq, window));
+				vec::Rect<std::vector<float>>(imageR, t, j, window, countX, countY, R);
+				vec::vec_multiply(L, R, prod, window);
+				auto summ = vec::vec_sum<std::vector<float>>(prod, window);
+				vec::vec_multiply(L, L, L_sq, window);
+				vec::vec_multiply(R, R, R_sq, window);
+				auto denom = std::sqrt(vec::vec_sum<std::vector<float>>(L_sq,window) * vec::vec_sum<std::vector<float>>(R_sq, window));
 				auto norm = summ / denom;
 				if (norm > max) {
 					max = norm;
@@ -167,8 +83,8 @@ tt NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 			   //  sum = int(imageL.at<uchar>(cv::Point(p_x, y))) + sum;
 			   //  cog = sum / 3;
 		   //  }
-			disparity = map_value(src, dst, disparity);
-			disp_img[getIndexGlobal(countX, i, j)] = disparity;
+			disparity = vec::map_value(src, dst, disparity);
+			disp_img[vec::getIndexGlobal(countX, i, j)] = disparity;
 		}
 	}
 	return disp_img;

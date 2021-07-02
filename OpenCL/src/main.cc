@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <Core/Image.hpp>
-#include "cl_disparity.cc"
+#include "cl_disparity.h"
 
 int main(int argc, char** argv) {
     if (argc < 5) {

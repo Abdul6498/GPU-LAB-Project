@@ -48,15 +48,17 @@ void CLDisparity::compute(
     auto d_input_r = cl::Image2D(ctx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_READ_ONLY, cl::ImageFormat(CL_R, CL_FLOAT), width, height);
     auto d_output = cl::Buffer(ctx, CL_MEM_HOST_READ_ONLY | CL_MEM_WRITE_ONLY, output_size);
 
-    cl::Event evt_overhead;
+    cl::Event evt_overhead1;
+    cl::Event evt_overhead2;
+    cl::Event evt_overhead3;
     cl::Event evt_compute;
 
     cl::size_t<3> region;
     region[0] = width;
     region[1] = height;
     region[2] = 1;
-    queue.enqueueWriteImage(d_input_l, false, {}, region, width * sizeof(float), 0, input_l, nullptr, &evt_overhead);
-    queue.enqueueWriteImage(d_input_r, false, {}, region, width * sizeof(float), 0, input_r, nullptr, &evt_overhead);
+    queue.enqueueWriteImage(d_input_l, false, {}, region, width * sizeof(float), 0, input_l, nullptr, &evt_overhead1);
+    queue.enqueueWriteImage(d_input_r, false, {}, region, width * sizeof(float), 0, input_r, nullptr, &evt_overhead2);
 
     if (type == CLDisparityTypeSAD) {
         kern_sad.setArg(0, d_input_l);
@@ -77,11 +79,13 @@ void CLDisparity::compute(
         queue.enqueueNDRangeKernel(kern_ncc, 0, { width, height }, cl::NullRange, nullptr, &evt_compute);
     }
 
-    queue.enqueueReadBuffer(d_output, false, 0, output_size, output, nullptr, &evt_overhead);
+    queue.enqueueReadBuffer(d_output, false, 0, output_size, output, nullptr, &evt_overhead3);
     queue.finish();
 
     if (perf_data != nullptr) {
         perf_data->compute = OpenCL::getElapsedTime(evt_compute);
-        perf_data->overhead = OpenCL::getElapsedTime(evt_overhead);
+        perf_data->overhead = OpenCL::getElapsedTime(evt_overhead1)
+            + OpenCL::getElapsedTime(evt_overhead2)
+            + OpenCL::getElapsedTime(evt_overhead3);
     }
 }

@@ -1,4 +1,5 @@
 #include "vec_operation.h"
+
 namespace vec {
 
 	void show_options() {
@@ -24,6 +25,37 @@ namespace vec {
 		std::cout << "Download Time : " << rec_time << std::endl;
 		std::cout << "Speed Up : " << speedup << std::endl;
 		std::cout << "Speed Up with memory copy : " << speedup_w_m << std::endl;
+	}
+
+	std::vector<uint8_t> scaler_multiply(std::vector<float>& vec, uint8_t num) {
+		std::vector<uint8_t> vec_out(vec.size());
+		for (int i = 0; i < vec.size(); i++) {
+			vec_out[i] = uint8_t(vec[i] * num);
+		}
+		return vec_out;
+	}
+
+	float find_median(std::vector<float>& vec) {
+		float temp = 0;
+		float m_median = 0;
+		for (int i = 0; i < vec.size(); i++) {
+			for (int j = i + 1; j < vec.size(); j++) {
+				if (vec[i] >= vec[j]) {
+					temp = vec[i];
+					vec[i] = vec[j];
+					vec[j] = temp;
+				}
+			}
+		}
+		vec.size() % 2 ? m_median = vec[vec.size() / 2] : m_median = vec[(vec.size() - 1) / 2 + 1];
+
+		return m_median;
+	}
+	std::vector<float> clone(std::vector<float>& src, std::vector<float>& dst) {
+		for (int i = 0; i < src.size(); i++) {
+			dst[i] = src[i];
+		}
+		return dst;
 	}
 
 }
@@ -57,4 +89,47 @@ int stereo::load_files(std::string path, std::vector < std::string >& filename) 
 
 	}
 	return i-1;
+}
+
+std::vector<float> filter::histogram(std::vector<float>& image) {
+
+	std::vector<uint8_t> grey_image = vec::scaler_multiply(image, 255);
+	std::vector<float> imageE(image.size());
+	int grey_values[256] = { 0 };
+	float PDF[256] = { 0 };
+	float CDF[256] = { 0.00001 };
+	uint8_t Sk[256] = { 0 };
+
+	for (int i = 0; i < grey_image.size(); i++)
+		grey_values[grey_image[i]]++;
+
+	PDF[0] = float(grey_values[0]) / float(grey_image.size());
+	CDF[0] = PDF[0];
+	for (int g = 1; g <= 255; g++) {
+		PDF[g] = float(grey_values[g]) / float(grey_image.size());
+		CDF[g] = float(PDF[g] + CDF[g - 1]);
+	}
+
+	for (int i = 0; i < grey_image.size(); i++)
+		imageE[i] = float(CDF[grey_image[i]]);
+	Core::writeImagePGM("hist.pgm", imageE, 450, 375);
+	return imageE;
+}
+
+
+std::vector<float> filter::median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY) {
+	LOG("Median");
+	vec::clone(image, image_out);
+	std::size_t count = size * size;
+	std::vector<float> rect(count);
+	float m_median = 0;
+	for (int i = 0; i < countX-1; i++) {
+		for (int j = 0; j < countY-1; j++) {
+			vec::Rect<std::vector<float>>(image, i, j, size, countX, countY, rect);	
+			m_median = vec::find_median(rect);
+			image_out[vec::getIndexGlobal(countX, i+1, j+1)] = m_median;
+		}
+	}
+
+	return image_out;
 }

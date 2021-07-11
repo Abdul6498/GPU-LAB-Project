@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 	int idx_R = -1;	//Get user index for Right image
 
 	stereo stereo;	// Class for stereo functions
-	stereo.window = 10;	//window size
+	stereo.window = 3;	//window size
 	stereo.dmax = 50;	//Max diparity
 	std::vector < std::string > filename;	//Variable for file name
 
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 		std::cerr << "Warning! You are comparing the same image \n";
 	}
 
-
+	filter filter;
 	
 	std::vector<float> inputData;	//Variable for image data
 	std::size_t inputWidth, inputHeight;	//Variables for width and height of image
@@ -46,23 +46,27 @@ int main(int argc, char** argv) {
 	std::size_t countX = inputWidth;	
 	std::size_t countY = inputHeight;
 
-	std::vector<float> imageL(inputData.size());	//Left image
-	std::vector<float> imageR(inputData.size());	//Right image
-	std::vector<float> imageD(inputData.size());	//Disparity map
+	static std::vector<float> imageL(inputData.size());	//Left image
+	static std::vector<float> imageR(inputData.size());	//Right image
+	static std::vector<float> imageD(inputData.size());	//Disparity map
+	static std::vector<float> imageE(inputData.size());	//Hist
+	static std::vector<float> imageM(inputData.size());	//Median
 
+	imageE = filter.histogram(inputData);
 	{
 		//Read Left image Data
 		for (size_t j = 0; j < inputHeight; j++) {
 			for (size_t i = 0; i < inputWidth; i++) {
-				imageL[i + inputWidth * j] = inputData[(i % inputWidth) + inputWidth * (j % inputHeight)];
+				imageL[i + inputWidth * j] = imageE[(i % inputWidth) + inputWidth * (j % inputHeight)];
 			}
 		}
 		Core::readImagePGM(filename[idx_R], inputData, inputWidth, inputHeight);
 
+		imageE = filter.histogram(inputData);
 		//Read Right image Data
 		for (size_t j = 0; j < inputHeight; j++) {
 			for (size_t i = 0; i < inputWidth; i++) {
-				imageR[i + inputWidth * j] = inputData[(i % inputWidth) + inputWidth * (j % inputHeight)];
+				imageR[i + inputWidth * j] = imageE[(i % inputWidth) + inputWidth * (j % inputHeight)];
 			}
 		}
 	}
@@ -73,14 +77,19 @@ int main(int argc, char** argv) {
 		auto sad_end = std::chrono::high_resolution_clock::now();
 		auto sad_time = std::chrono::duration_cast<std::chrono::seconds>(sad_end - sad_start).count();
 
+		filter.median_fltr(imageD, imageM, 5, countX, countY);
+
 		Core::writeImagePGM("SAD_out.pgm", imageD, countX, countY);
+		Core::writeImagePGM("Median_SAD_out.pgm", imageM, countX, countY);
 
 		auto ncc_start = std::chrono::high_resolution_clock::now();
 		stereo.NCC_disparity<std::vector<float>>(imageL, imageR, imageD, countX, countY);	//NCC Disparity Calculation
 		auto ncc_end = std::chrono::high_resolution_clock::now();
 		auto ncc_time = std::chrono::duration_cast<std::chrono::seconds>(ncc_end - ncc_start).count();
 
+		filter.median_fltr(imageD, imageM, 5, countX, countY);
 		Core::writeImagePGM("NCC_out.pgm", imageD, countX, countY);	
+		Core::writeImagePGM("Median_NCC_out.pgm", imageM, countX, countY);
 
 	LOG("Completed");
 	return 0;

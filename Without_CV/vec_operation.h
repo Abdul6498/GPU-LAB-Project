@@ -108,6 +108,23 @@ namespace vec {
 	* Print Performance of algorithm for CPU and GPU
 	*/
 	void printperformance_data(std::string cpu_time, std::string sendtime, std::string gpu_time, std::string rec_time, float speedup, float speedup_w_m);
+	/*
+	*
+	* 
+	*/
+	std::vector<uint8_t> scaler_multiply(std::vector<float>& vec, uint8_t num);
+
+	/*
+	*
+	*
+	*/
+	float find_median(std::vector<float>& vec);
+
+	/*
+	*
+	*
+	*/
+	std::vector<float> clone(std::vector<float>& image);
 
 	template<typename T>
 	T Rect(T& in_image, int x, int y, size_t window, int countX, int countY, T& rect)
@@ -165,8 +182,17 @@ namespace vec {
 	{
 		return(src.first + ((dst.second - dst.first) / (src.second - src.first)) * (val - src.first));
 	}
+
 	
 }
+class filter
+{
+private:
+	float m_median = 0;
+public:
+	std::vector<float> histogram(std::vector<float>& image);
+	std::vector<float> median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY);
+};
 
 class stereo
 {
@@ -242,7 +268,7 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 					best_match = t;
 				}
 			}
-			//Find coarse pixel for better localization
+			//Find Sub pixel for better localization
 			disp_est = disparity - 0.5 * ( (sad_val[best_match + 1] - sad_val[best_match - 1]) / 
 										(sad_val[best_match - 1] - (2 * sad_val[best_match]) + sad_val[best_match + 1]));
 			auto disp_est1 = vec::map_value(src, dst, disp_est);
@@ -267,6 +293,8 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> R_sq(count);
 	std::vector<float> L_sq(count);
 	std::vector<float> prod(count);
+	float* ncc_val = new float[countX];
+
 	for (int i = dmax; i < (int)countX; i++)
 	{
 		for (int j = 0; j < (int)countY; j++)
@@ -282,13 +310,17 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 				vec::vec_multiply(R, R, R_sq, window);
 				auto denom = std::sqrt(vec::vec_sum<std::vector<float>>(L_sq, window) * vec::vec_sum<std::vector<float>>(R_sq, window));
 				auto norm = summ / denom;
+				ncc_val[t] = norm;
 				if (norm > max) {
 					max = norm;
 					disparity = i - t;
+					best_match = t;
 				}
 			}
-			disparity = vec::map_value(src, dst, disparity);
-			disp_img[vec::getIndexGlobal(countX, i, j)] = disparity;
+			disp_est = disparity - 0.5 * ((ncc_val[best_match + 1] - ncc_val[best_match - 1]) /
+				(ncc_val[best_match - 1] - (2 * ncc_val[best_match]) + ncc_val[best_match + 1]));
+			auto disp_est1 = vec::map_value(src, dst, disp_est);
+			disp_img[vec::getIndexGlobal(countX, i, j)] = disp_est1;
 		}
 	}
 	LOG("NCC Processing started");

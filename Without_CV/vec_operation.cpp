@@ -91,10 +91,18 @@ int stereo::load_files(std::string path, std::vector < std::string >& filename) 
 	return i-1;
 }
 
-std::vector<float> filter::histogram(std::vector<float>& image) {
+std::vector<float> stereo::load_images(std::vector<float>& image_in, std::vector<float>& image_out, std::size_t inputWidth, std::size_t inputHeight) {
+	for (size_t j = 0; j < inputHeight; j++) {
+		for (size_t i = 0; i < inputWidth; i++) {
+			image_out[i + inputWidth * j] = image_in[(i % inputWidth) + inputWidth * (j % inputHeight)];
+		}
+	}
+	return image_out;
+}
+
+std::vector<float> filter::histogram(std::vector<float>& image, std::vector<float>& imageE) {
 
 	std::vector<uint8_t> grey_image = vec::scaler_multiply(image, 255);
-	std::vector<float> imageE(image.size());
 	int grey_values[256] = { 0 };
 	float PDF[256] = { 0 };
 	float CDF[256] = { 0.00001 };

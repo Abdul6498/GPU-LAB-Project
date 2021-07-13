@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <array>
 #include <boost/lexical_cast.hpp>
+#include <thread>
 
 #define LOG(x) std::cout << x << std::endl;
 #define LOG_w(x) std::cout << x << " , ";
@@ -124,7 +125,7 @@ namespace vec {
 	*
 	*
 	*/
-	std::vector<float> clone(std::vector<float>& image);
+	std::vector<float> clone(std::vector<float>& src, std::vector<float>& dst);
 
 	template<typename T>
 	T Rect(T& in_image, int x, int y, size_t window, int countX, int countY, T& rect)
@@ -190,7 +191,7 @@ class filter
 private:
 	float m_median = 0;
 public:
-	std::vector<float> histogram(std::vector<float>& image);
+	std::vector<float> histogram(std::vector<float>& image, std::vector<float>& imageE);
 	std::vector<float> median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY);
 };
 
@@ -204,7 +205,6 @@ public:
 	size_t window = 10;
 	float disp_est = 0;
 	int dmax = 50;
-	int best_match = 0;
 	/*
 	* Find Indexes:
 	* str: Input String
@@ -219,6 +219,7 @@ public:
 	*/
 	int load_files(std::string path, std::vector < std::string >& filename);
 
+	std::vector<float> load_images(std::vector<float>& image_in, std::vector<float>& image_out, std::size_t inputWidth, std::size_t inputHeight);
 	/*
 	* Compute Normalized Cross Correlation disparity
 	* imageL: Left Camera Image
@@ -252,7 +253,8 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> R(count);
 	std::vector<float> diff(count);
 	float* sad_val = new float[countX];
-	
+	int best_match = 0;
+
 	for (int i = dmax; i < (int)countX; i++) {
 		for (int j = 0; j < (int)countY; j++) {
 			float min = 10000.01;
@@ -294,7 +296,7 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> L_sq(count);
 	std::vector<float> prod(count);
 	float* ncc_val = new float[countX];
-
+	int best_match = 0;
 	for (int i = dmax; i < (int)countX; i++)
 	{
 		for (int j = 0; j < (int)countY; j++)
@@ -323,6 +325,6 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 			disp_img[vec::getIndexGlobal(countX, i, j)] = disp_est1;
 		}
 	}
-	LOG("NCC Processing started");
+	LOG("NCC Processing Completed");
 	return disp_img;
 }

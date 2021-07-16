@@ -1,7 +1,7 @@
 #include <iostream>
-#include <fstream>
 #include <Core/Image.hpp>
 #include "cl_disparity.h"
+#include "cpu_disparity.h"
 
 int main(int argc, char** argv) {
     if (argc < 5) {
@@ -25,8 +25,10 @@ int main(int argc, char** argv) {
     output_img.resize(width * height);
 
     short max_disparity = 48;
-    short window_size = 6;
+    short window_size = 3;
     short denoise_radius = 2;
+
+    cpu_disparity();
 
     CLDisparityPerfData perf;
 
@@ -40,7 +42,7 @@ int main(int argc, char** argv) {
         CLDisparityTypeSAD,
         max_disparity,
         window_size,
-        true,
+        false,
         denoise_radius,
         &perf
     });
@@ -53,8 +55,8 @@ int main(int argc, char** argv) {
         << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
         << std::endl;
 
-    //for (auto i = 0; i < output.size(); i++) output_img[i] = input_l[i];
-    //Core::writeImagePGM(output_sad_path + "_DBG_hist.pgm", output_img, width, height);
+    for (auto i = 0; i < output.size(); i++) output_img[i] = input_l[i];
+    Core::writeImagePGM(output_sad_path + "_DBG_hist.pgm", output_img, width, height);
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) max_disparity;
     Core::writeImagePGM(output_sad_path, output_img, width, height);
@@ -68,7 +70,7 @@ int main(int argc, char** argv) {
         CLDisparityTypeNCC,
         max_disparity,
         window_size,
-        true,
+        false,
         denoise_radius,
         &perf
     });

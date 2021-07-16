@@ -10,7 +10,7 @@ CLDisparity::CLDisparity() {
         if (cu > highestCU) {
             device = d;
             highestCU = cu;
-            // break; remove this on computers where it doesn't crash
+            break; // remove this on computers where it doesn't crash
         }
     }
     if (!highestCU) throw "no CL devices found!";
@@ -83,11 +83,13 @@ void CLDisparity::compute(CLDisparityComputeInput i) {
         kern_hist_comb.setArg(0, d_hist_chunks_l);
         kern_hist_comb.setArg(1, d_cdf_l);
         kern_hist_comb.setArg(2, chunk_count_x * chunk_count_y);
+        kern_hist_comb.setArg(3, (size_t) (i.width * i.height));
         queue.enqueueNDRangeKernel(kern_hist_comb, 0, { 256 }, { 256 }, nullptr, &evt_hist_hl);
 
         kern_hist_comb.setArg(0, d_hist_chunks_r);
         kern_hist_comb.setArg(1, d_cdf_r);
         kern_hist_comb.setArg(2, chunk_count_x * chunk_count_y);
+        kern_hist_comb.setArg(3, (size_t) (i.width * i.height));
         queue.enqueueNDRangeKernel(kern_hist_comb, 0, { 256 }, { 256 }, nullptr, &evt_hist_hr);
 
         kern_hist_eq.setArg(0, d_input_l);
@@ -100,9 +102,10 @@ void CLDisparity::compute(CLDisparityComputeInput i) {
         kern_hist_eq.setArg(2, d_input_r);
         queue.enqueueNDRangeKernel(kern_hist_eq, 0, { i.width, i.height }, cl::NullRange, nullptr, &evt_hist_er);
 
-        // auto dbg_img = cl::Image2D(ctx, CL_MEM_HOST_READ_ONLY | CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_R, CL_FLOAT), i.width, i.height);
-        // queue.enqueueCopyImage(d_input_l, dbg_img, {}, {}, region);
-        // queue.enqueueReadImage(dbg_img, false, {}, region, i.width * sizeof(float), 0, i.input_l);
+        auto dbg_img = cl::Image2D(ctx, CL_MEM_HOST_READ_ONLY | CL_MEM_WRITE_ONLY, cl::ImageFormat(CL_R, CL_FLOAT), i.width, i.height);
+        queue.enqueueCopyImage(d_input_l, dbg_img, {}, {}, region);
+        queue.enqueueReadImage(dbg_img, false, {}, region, i.width * sizeof(float), 0, i.input_l);
+        queue.finish();
     }
 
     if (i.type == CLDisparityTypeSAD) {
@@ -138,12 +141,16 @@ void CLDisparity::compute(CLDisparityComputeInput i) {
     if (i.perf_out != nullptr) {
         i.perf_out->upload = OpenCL::getElapsedTime(evt_upload_l)
             + OpenCL::getElapsedTime(evt_upload_r);
-        i.perf_out->equalize = OpenCL::getElapsedTime(evt_hist_cl)
-            + OpenCL::getElapsedTime(evt_hist_hl) + OpenCL::getElapsedTime(evt_hist_el)
-            + OpenCL::getElapsedTime(evt_hist_cr) + OpenCL::getElapsedTime(evt_hist_hr)
-            + OpenCL::getElapsedTime(evt_hist_er);
+        if (i.equalize_input) {
+            i.perf_out->equalize = OpenCL::getElapsedTime(evt_hist_cl)
+                                   + OpenCL::getElapsedTime(evt_hist_hl) + OpenCL::getElapsedTime(evt_hist_el)
+                                   + OpenCL::getElapsedTime(evt_hist_cr) + OpenCL::getElapsedTime(evt_hist_hr)
+                                   + OpenCL::getElapsedTime(evt_hist_er);
+        }
         i.perf_out->disparity = OpenCL::getElapsedTime(evt_disparity);
-        i.perf_out->denoise = OpenCL::getElapsedTime(evt_median);
+        if (i.denoise_radius) {
+            i.perf_out->denoise = OpenCL::getElapsedTime(evt_median);
+        }
         i.perf_out->download = OpenCL::getElapsedTime(evt_download);
     }
 }

@@ -24,7 +24,7 @@ __kernel void disparity_sad(
     int cx = x - window_size / 2;
     int cy = y - window_size / 2;
 
-    for (short dx = -1; dx >= -sample_offset - 1; dx--) {
+    for (short dx = 0; dx >= -sample_offset - 1; dx--) {
         // window x position
         int window_x = cx + dx;
         // absolute difference
@@ -99,7 +99,7 @@ __kernel void disparity_ncc(
     float correlations[3] = { 0, 0, 0 }; // moving window of 3 past correlations
     float max_corr = -INFINITY;
 
-    for (short dx = -1; dx >= -sample_offset - 1; dx--) {
+    for (short dx = 0; dx >= -sample_offset - 1; dx--) {
         int window_x = cx + dx;
 
         float mean_r = mean_img[count_x * y + (x + dx)];

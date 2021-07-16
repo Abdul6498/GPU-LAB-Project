@@ -10,6 +10,7 @@ CLDisparity::CLDisparity() {
         if (cu > highestCU) {
             device = d;
             highestCU = cu;
+            // break; remove this on computers where it doesn't crash
         }
     }
     if (!highestCU) throw "no CL devices found!";

@@ -10,6 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <filesystem>
 
 #define LOG(x) std::cout << x << std::endl;
 #define LOG_w(x) std::cout << x << " , ";
@@ -174,6 +175,35 @@ void load_images(const cv::String& dirname, std::vector< cv::Mat >& img_lst)
         img_lst.push_back(cv::imread(files[i]));
 
 }
+cv::Mat myMedian(cv::Mat& srcImage)
+{
+    cv::Mat dstImage = srcImage.clone();
+    // Define a vector list
+        std::vector<uchar>List;
+    // Traverse the image source
+        for (int k = 1; k < srcImage.cols - 1; k++)
+        {
+            for (int n = 1; n < srcImage.rows - 1; n++) {
+
+                // Traversing the template window
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        for (int j = -1; j <= 1; j++)
+                        {
+                            // Put the pixels in the window into the vector
+                                List.push_back(srcImage.at<uchar>(n + j, k + i));
+                        }
+                    }
+                // Sort the elements in the window
+                    sort(List.begin(), List.end());
+                // Take the middle element of the vector as the current element
+                    dstImage.at<uchar>(n, k) = List[5];
+                // Clear the elements in the current vector
+                    List.clear();
+            }
+        }
+    return dstImage;
+}
 int main()
 {
     cv::Mat imageL = cv::imread("im2.png");
@@ -185,6 +215,7 @@ int main()
     // imageL = affine_t<cv::Mat>(imageL);
     // imageR = affine_t<cv::Mat>(imageR);
     cv::equalizeHist(imageL, imageL);
+    cv::imwrite("Hist.pgm", imageL);
     cv::equalizeHist(imageR, imageR);
     int op = -1;
     LOG("Option [1]: SAD \nOption [2]: NCC \nOption [3]: Compare Peformance of Both");
@@ -203,8 +234,10 @@ int main()
     auto end = std::chrono::high_resolution_clock::now();
     auto tm = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);	// milliseconds
     std::cout << "time: " << tm.count() << " ms" << std::endl;
+    cv::imshow("Without Median", M);
+    cv::Mat dst = myMedian(M);
     LOG("Completed");
-    cv::imshow("Disp", M);
+    cv::imshow("With Median", dst);
     cv::imwrite("output_SAD.bmp", M);
     int k = cv::waitKey(0); // Wait for a keystroke in the window
     if (k == 's')

@@ -2,8 +2,7 @@
 #include "vec_operation.h"
 
 int main(int argc, char** argv) {
-
-	if (argc < 1) {
+    if (argc < 1) {
 		std::cerr << "No argument found";
 		exit(1);
 	}
@@ -37,14 +36,14 @@ int main(int argc, char** argv) {
 	}
 
 	filter filter;
-	
+
 	std::vector<float> inputData , inputData_R;	//Variable for image data
 	std::size_t inputWidth, inputHeight;	//Variables for width and height of image
-	
+
 	Core::readImagePGM(filename[idx_L], inputData, inputWidth, inputHeight);	//Read image dat from the specific path
 	Core::readImagePGM(filename[idx_R], inputData_R, inputWidth, inputHeight);
 
-	std::size_t countX = inputWidth;	
+	std::size_t countX = inputWidth;
 	std::size_t countY = inputHeight;
 
 	static std::vector<float> imageL(inputData.size());	//Left image
@@ -60,7 +59,7 @@ int main(int argc, char** argv) {
 	std::string med_ncc_out_path = input_path + "Median_NCC_out.pgm";
 	std::string sad_out_path = input_path + "SAD_out.pgm";
 	std::string ncc_out_path = input_path + "NCC_out.pgm";
-	
+
 	std::thread t1(&filter::histogram, &filter, std::ref(inputData), std::ref(imageE));
 	std::thread t2(&filter::histogram, &filter, std::ref(inputData_R), std::ref(imageH));
 	t1.join();
@@ -80,17 +79,17 @@ int main(int argc, char** argv) {
 	auto sad_time = std::chrono::duration_cast<std::chrono::milliseconds>(sad_end - sad_start).count();
 
 	std::thread t5(&stereo::NCC_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_ncc), countX, countY);
-		
+
 	std::thread t6(&filter::median_fltr, &filter, std::ref(image_sad), std::ref(imageM_sad), 5, countX, countY);
 
-	
+
 
 	auto ncc_start = std::chrono::high_resolution_clock::now();
 	t5.join();
 	auto ncc_end = std::chrono::high_resolution_clock::now();
 	auto ncc_time = std::chrono::duration_cast<std::chrono::milliseconds>(ncc_end - ncc_start).count();
 
-	
+
 
 	std::thread t7(&filter::median_fltr, &filter, std::ref(image_ncc), std::ref(imageM_ncc), 5, countX, countY);
 

@@ -61,7 +61,7 @@ void CLDisparity::compute(CLDisparityComputeInput i) {
         size_t hist_chunk_size = 16;
         size_t chunk_count_x = ceil(float(i.width) / float(hist_chunk_size));
         size_t chunk_count_y = ceil(float(i.width) / float(hist_chunk_size));
-        size_t hist_chunks_size = chunk_count_x * chunk_count_y * sizeof(int);
+        size_t hist_chunks_size = chunk_count_x * chunk_count_y * sizeof(ushort);
         size_t hist_size = 256 * sizeof(float);
         auto d_hist_chunks_l = cl::Buffer(ctx, CL_MEM_HOST_READ_ONLY | CL_MEM_READ_WRITE, hist_chunks_size);
         auto d_hist_chunks_r = cl::Buffer(ctx, CL_MEM_HOST_READ_ONLY | CL_MEM_READ_WRITE, hist_chunks_size);
@@ -70,26 +70,26 @@ void CLDisparity::compute(CLDisparityComputeInput i) {
 
         kern_hist_chunk.setArg(0, d_input_l);
         kern_hist_chunk.setArg(1, d_hist_chunks_l);
-        kern_hist_chunk.setArg(2, hist_chunk_size);
-        kern_hist_chunk.setArg(3, i.width);
+        kern_hist_chunk.setArg(2, i.width);
+        kern_hist_chunk.setArg(3, i.height);
         queue.enqueueNDRangeKernel(kern_hist_chunk, 0, { chunk_count_x, chunk_count_y }, cl::NullRange, nullptr, &evt_hist_cl);
 
         kern_hist_chunk.setArg(0, d_input_r);
         kern_hist_chunk.setArg(1, d_hist_chunks_r);
-        kern_hist_chunk.setArg(2, hist_chunk_size);
-        kern_hist_chunk.setArg(3, i.width);
+        kern_hist_chunk.setArg(2, i.width);
+        kern_hist_chunk.setArg(3, i.height);
         queue.enqueueNDRangeKernel(kern_hist_chunk, 0, { chunk_count_x, chunk_count_y }, cl::NullRange, nullptr, &evt_hist_cr);
 
         kern_hist_comb.setArg(0, d_hist_chunks_l);
         kern_hist_comb.setArg(1, d_cdf_l);
         kern_hist_comb.setArg(2, chunk_count_x * chunk_count_y);
-        kern_hist_comb.setArg(3, (size_t) (i.width * i.height));
+        kern_hist_comb.setArg(3, i.width * i.height);
         queue.enqueueNDRangeKernel(kern_hist_comb, 0, { 256 }, { 256 }, nullptr, &evt_hist_hl);
 
         kern_hist_comb.setArg(0, d_hist_chunks_r);
         kern_hist_comb.setArg(1, d_cdf_r);
         kern_hist_comb.setArg(2, chunk_count_x * chunk_count_y);
-        kern_hist_comb.setArg(3, (size_t) (i.width * i.height));
+        kern_hist_comb.setArg(3, i.width * i.height);
         queue.enqueueNDRangeKernel(kern_hist_comb, 0, { 256 }, { 256 }, nullptr, &evt_hist_hr);
 
         kern_hist_eq.setArg(0, d_input_l);

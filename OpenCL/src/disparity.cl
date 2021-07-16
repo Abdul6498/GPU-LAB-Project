@@ -142,14 +142,13 @@ __kernel void disparity_ncc(
 
 __kernel void histogram_chunks(
     __read_only image2d_t input,
-    __write_only __global int* chunks,
-    __read_only int chunk_size,
-    __read_only int width
+    __write_only __global ushort* chunks,
+    __read_only int width,
+    __read_only int height
 ) {
+    const int chunk_size = 16;
     int chunk_x = get_global_id(0);
     int chunk_y = get_global_id(1);
-    int start_x = chunk_x * chunk_size;
-    int start_y = chunk_y * chunk_size;
 
     int chunks_width = get_global_size(0);
     int chunk_offset = (chunk_y * chunks_width + chunk_x) * 256;
@@ -159,11 +158,13 @@ __kernel void histogram_chunks(
         hist[i] = 0;
     }
 
-    for (int y = start_y; y < start_y + chunk_size; y++) {
-        for (int x = start_x; x < start_x + chunk_size; x++) {
-            int hist_value = read_imagef(input, image_sampler, (int2) { x, y }).r * 255.f;
+    int start_x = chunk_x * chunk_size;
+    int start_y = chunk_y * chunk_size;
+    for (int y = start_y; y < min(start_y + chunk_size, height); y++) {
+        for (int x = start_x; x < min(start_x + chunk_size, width); x++) {
+            int hist_value = floor(read_imagef(input, image_sampler, (int2) { x, y }).r * 255.f);
             hist_value = clamp(hist_value, 0, 255);
-            hist[clamp(hist_value, 0, 255)]++;
+            hist[hist_value]++;
         }
     }
 
@@ -173,34 +174,32 @@ __kernel void histogram_chunks(
 }
 __attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel void histogram_combine(
-    __read_only __global int* chunks,
+    __read_only __global ushort* chunks,
     __write_only __global float* cdf,
     __read_only size_t chunk_count,
     __read_only size_t total_pixel_count
 ) {
-    int value = get_global_id(0);
+    int gray_value = get_global_id(0);
 
-    long val_count = 0;
+    ulong val_count = 0;
     for (size_t i = 0; i < chunk_count; i++) {
-        val_count += chunks[i * 256 + value];
+        val_count += chunks[i * 256 + gray_value];
     }
 
-    __local float pdf[256];
-    pdf[value] = float(val_count) / total_pixel_count;
+    __local double pdf[256];
+    pdf[gray_value] = double(val_count) / total_pixel_count * 41;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (value == 0) {
+    if (gray_value == 0) {
         // turn it into a CDF
-        for (size_t i = 1; i < 256; i++) {
-            printf("[%d] %f\n", i, pdf[i]);
-            pdf[i] += pdf[i - 1];
+        // (a parallel prefix sum seems overkill for this)
+        double accum = 0.;
+        for (size_t i = 0; i < 256; i++) {
+            accum += pdf[i];
+            printf("[%d] %f, %f\n", i, pdf[i], accum);
+            cdf[i] = accum;
         }
     }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    double max_val = pdf[255];
-    cdf[value] = double(pdf[value]) / max_val;
 }
 __kernel void histogram_equalize(
     __read_only image2d_t input,
@@ -211,7 +210,7 @@ __kernel void histogram_equalize(
     int y = get_global_id(1);
     float value = read_imagef(input, (int2) { x, y }).r;
     value = cdf[(size_t) clamp((value * 255.f), 0.f, 255.f)];
-    //value = cdf[((x % 256) + 256) % 256]; // debug histogram output
+    value = y < 32 ? ((x % 256) / 255.f) : cdf[x % 256]; // debug histogram output
     write_imagef(output, (int2) { x, y }, (float4) { value, 0, 0, 0 });
 }
 

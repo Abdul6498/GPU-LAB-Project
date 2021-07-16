@@ -26,21 +26,11 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Add source to this project's executable.
-#add_executable (Opencl-ex1 "OpenCLExercise6_VolumeRendering" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "OpenCLExercise6_PrefixSum" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "mat_mul_practice.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "sobel_practice.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-add_executable (Opencl-ex1 "mainwindow.ui" "mainwindow.cpp" "resources.qrc" "Lab_project.cpp" ${CORE_SRC} ${OPENCL_SRC}  "vec_operation.h" "vec_operation.cpp")
-#add_executable (Opencl-ex1 "__add.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "try.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "ex2_practice.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "Opencl-ex1.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "OpenCLExercise2_Mandelbrot.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "OpenCLExercise3_Sobel.cpp" ${CORE_SRC} ${OPENCL_SRC} )
-#add_executable (Opencl-ex1 "OpenCLExercise4_MatrixMultiplication.cpp" ${CORE_SRC} ${OPENCL_SRC} )
 
-target_include_directories (Opencl-ex1 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} "CORE" "OPENCL" "src")
-target_link_libraries (Opencl-ex1 ${OpenCL_LIBRARY} imagehlp Qt5::Widgets)
+add_executable (cpu_disparity "Lab_project.cpp" ${CORE_SRC} ${OPENCL_SRC}  "vec_operation.h" "vec_operation.cpp")
+
+
+target_include_directories (cpu_disparity PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} "CORE" "OPENCL")
+target_link_libraries (cpu_disparity ${OpenCL_LIBRARY} imagehlp)
 
 # TODO: Add tests and install targets if needed.

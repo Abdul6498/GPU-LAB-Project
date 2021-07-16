@@ -108,22 +108,24 @@ namespace vec {
 	/*
 	* Print Performance of algorithm for CPU and GPU
 	*/
-	void printperformance_data(std::string cpu_time, std::string sendtime, std::string gpu_time, std::string rec_time, float speedup, float speedup_w_m);
+	void print_performance(std::vector<std::string>& performance);
 	/*
-	*
-	* 
+	* Multiply Vector with a scaler number
+	* vec: Input Vector.
+	* num: Scaler number
 	*/
 	std::vector<uint8_t> scaler_multiply(std::vector<float>& vec, uint8_t num);
 
 	/*
-	*
-	*
+	* Find Median of vector
+	* ve: Input Vector
 	*/
 	float find_median(std::vector<float>& vec);
 
 	/*
-	*
-	*
+	* Clone 2 images/vectors
+	* src: Input image
+	* dst: Output Image
 	*/
 	std::vector<float> clone(std::vector<float>& src, std::vector<float>& dst);
 
@@ -248,6 +250,7 @@ template<typename tt>
 tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
 	LOG("SAD Processing started...........");
+	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;	
 	std::vector<float> L(count);
 	std::vector<float> R(count);
@@ -288,6 +291,7 @@ template<typename tt>
 tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
 	LOG("NCC Processing started...........");
+	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;
 	std::vector<float> L(count);
 	std::vector<float> R(count);

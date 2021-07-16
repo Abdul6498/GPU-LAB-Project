@@ -71,6 +71,8 @@ int main(int argc, char** argv) {
     std::string gpu_sad_out_path = input_path + "/SAD_out_gpu.pgm";
     std::string gpu_ncc_out_path = input_path + "/NCC_out_gpu.pgm";
 
+    std::vector<std::string> performance;
+
     auto hist_start = std::chrono::high_resolution_clock::now();
     std::thread t1(&filter::histogram, &filter, std::ref(inputData_L), std::ref(image_eq_l));
     std::thread t2(&filter::histogram, &filter, std::ref(inputData_R), std::ref(image_eq_r));
@@ -141,6 +143,12 @@ int main(int argc, char** argv) {
         << " download " << perf.download
         << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
         << std::endl;
+    performance.push_back("[GPU] [SAD] Upload Time: " + std::to_string(perf.upload) + "ms");
+    performance.push_back("[GPU] [SAD] Equlization Execution Time: " + std::to_string(perf.equalize) + "ms");
+    performance.push_back("[GPU] [SAD] Disparity Execution Time: " + std::to_string(perf.disparity) + "ms");
+    performance.push_back("[GPU] [SAD] Denosing Time: " + std::to_string(perf.denoise) + "ms");
+    performance.push_back("[GPU] [SAD] Download Time: " + std::to_string(perf.download) + "ms");
+    performance.push_back("[GPU] [SAD] Total Time: " + std::to_string(perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download) + "ms");
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) stereo.dmax;
     Core::writeImagePGM(gpu_med_sad_out_path, output_img, countX, countY);
@@ -156,8 +164,21 @@ int main(int argc, char** argv) {
               << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
               << std::endl;
 
+    performance.push_back("[GPU] [NCC] Upload Time: " + std::to_string(perf.upload) + "ms");
+    performance.push_back("[GPU] [NCC] Equlization Execution Time: " + std::to_string(perf.equalize) + "ms");
+    performance.push_back("[GPU] [NCC] Disparity Execution Time: " + std::to_string(perf.disparity) + "ms");
+    performance.push_back("[GPU] [NCC] Denosing Time: " + std::to_string(perf.denoise) + "ms");
+    performance.push_back("[GPU] [NCC] Download Time: " + std::to_string(perf.download) + "ms");
+    performance.push_back("[GPU] [NCC] Total Time: " + std::to_string(perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download) + "ms");
+
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) stereo.dmax;
     Core::writeImagePGM(gpu_med_ncc_out_path, output_img, countX, countY);
 
     // TODO: print performance info
+    performance.push_back("[CPU] Histogram Execution Time: " + std::to_string(hist_time) + "ms");
+    performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
+    performance.push_back("[CPU] NCC Execution Time: " + std::to_string(ncc_time) + "ms");
+    performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+
+    vec::print_performance(performance);
 }

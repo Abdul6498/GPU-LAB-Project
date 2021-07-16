@@ -17,14 +17,12 @@ namespace vec {
 			return img[getIndexGlobal(countX, i, j)];
 	}
 
-	void printperformance_data(std::string cpu_time, std::string sendtime, std::string gpu_time, std::string rec_time, float speedup, float speedup_w_m)
+	void print_performance(std::vector<std::string> &performance)
 	{
-		std::cout << "CPU Time : " << cpu_time << std::endl;
-		std::cout << "Copy Time : " << sendtime << std::endl;
-		std::cout << "GPU Time : " << gpu_time << std::endl;
-		std::cout << "Download Time : " << rec_time << std::endl;
-		std::cout << "Speed Up : " << speedup << std::endl;
-		std::cout << "Speed Up with memory copy : " << speedup_w_m << std::endl;
+
+		for (int i = 0; i < performance.size(); i++) {
+			LOG(performance[i]);
+		}
 	}
 
 	std::vector<uint8_t> scaler_multiply(std::vector<float>& vec, uint8_t num) {
@@ -133,7 +131,7 @@ std::vector<float> filter::median_fltr(std::vector<float>& image, std::vector<fl
 	float m_median = 0;
 	for (int i = 0; i < countX-1; i++) {
 		for (int j = 0; j < countY-1; j++) {
-			vec::Rect<std::vector<float>>(image, i, j, size, countX, countY, rect);
+			vec::Rect<std::vector<float>>(image, i, j, size, countX, countY, rect);	
 			m_median = vec::find_median(rect);
 			image_out[vec::getIndexGlobal(countX, i+1, j+1)] = m_median;
 		}

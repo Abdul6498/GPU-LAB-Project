@@ -108,22 +108,24 @@ namespace vec {
 	/*
 	* Print Performance of algorithm for CPU and GPU
 	*/
-	void printperformance_data(std::string cpu_time, std::string sendtime, std::string gpu_time, std::string rec_time, float speedup, float speedup_w_m);
+	void print_performance(std::vector<std::string>& performance);
 	/*
-	*
-	*
+	* Multiply Vector with a scaler number
+	* vec: Input Vector.
+	* num: Scaler number
 	*/
 	std::vector<uint8_t> scaler_multiply(std::vector<float>& vec, uint8_t num);
 
 	/*
-	*
-	*
+	* Find Median of vector
+	* ve: Input Vector
 	*/
 	float find_median(std::vector<float>& vec);
 
 	/*
-	*
-	*
+	* Clone 2 images/vectors
+	* src: Input image
+	* dst: Output Image
 	*/
 	std::vector<float> clone(std::vector<float>& src, std::vector<float>& dst);
 
@@ -184,7 +186,7 @@ namespace vec {
 		return(src.first + ((dst.second - dst.first) / (src.second - src.first)) * (val - src.first));
 	}
 
-
+	
 }
 class filter
 {
@@ -247,9 +249,9 @@ public:
 template<typename tt>
 tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
-    std::pair<float, float> src(0, 50), dst(0, 1);
 	LOG("SAD Processing started...........");
-	std::size_t count = window * window;
+	std::pair<float, float> src(0, dmax), dst(0, 1);
+	std::size_t count = window * window;	
 	std::vector<float> L(count);
 	std::vector<float> R(count);
 	std::vector<float> diff(count);
@@ -272,7 +274,7 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 				}
 			}
 			//Find Sub pixel for better localization
-			disp_est = disparity - 0.5 * ( (sad_val[best_match + 1] - sad_val[best_match - 1]) /
+			disp_est = disparity - 0.5 * ( (sad_val[best_match + 1] - sad_val[best_match - 1]) / 
 										(sad_val[best_match - 1] - (2 * sad_val[best_match]) + sad_val[best_match + 1]));
 			auto disp_est1 = vec::map_value(src, dst, disp_est);
 			disp_img[vec::getIndexGlobal(countX, i, j)] = disp_est1;
@@ -288,8 +290,8 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 template<typename tt>
 tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
-    std::pair<float, float> src(0, 50), dst(0, 1);
 	LOG("NCC Processing started...........");
+	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;
 	std::vector<float> L(count);
 	std::vector<float> R(count);

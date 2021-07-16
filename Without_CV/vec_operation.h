@@ -248,6 +248,7 @@ template<typename tt>
 tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
 	LOG("SAD Processing started...........");
+	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;	
 	std::vector<float> L(count);
 	std::vector<float> R(count);
@@ -288,6 +289,7 @@ template<typename tt>
 tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
 {
 	LOG("NCC Processing started...........");
+	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;
 	std::vector<float> L(count);
 	std::vector<float> R(count);

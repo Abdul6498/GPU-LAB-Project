@@ -116,8 +116,12 @@ std::vector<float> filter::histogram(std::vector<float>& image, std::vector<floa
 	for (int g = 1; g <= 255; g++) {
 		PDF[g] = float(grey_values[g]) / float(grey_image.size());
 		CDF[g] = float(PDF[g] + CDF[g - 1]);
+		//line("PDF: "); line(g); line(": "); LOG(PDF[g]);
+		//line("HIst: "); line(g); line(": "); LOG(grey_values[g]);
+		//LOG(CDF[g]);
 	}
-
+	//LOG(PDF);
+	//LOG(PDF);
 	for (int i = 0; i < grey_image.size(); i++)
 		imageE[i] = float(CDF[grey_image[i]]);
 	Core::writeImagePGM("hist.pgm", imageE, 450, 375);

@@ -25,21 +25,62 @@ int main(int argc, char** argv) {
     output_img.resize(width * height);
 
     short max_disparity = 48;
-    short window_size = 10;
+    short window_size = 6;
+    short denoise_radius = 2;
 
     CLDisparityPerfData perf;
 
     auto disparity = CLDisparity();
-    disparity.compute(input_l.data(), input_r.data(), output.data(), width, height, CLDisparityTypeSAD, max_disparity, window_size, &perf);
+    disparity.compute({
+        input_l.data(),
+        input_r.data(),
+        output.data(),
+        width,
+        height,
+        CLDisparityTypeSAD,
+        max_disparity,
+        window_size,
+        true,
+        denoise_radius,
+        &perf
+    });
 
-    std::cout << "Took " << perf.compute << " (" << perf.overhead << " overhead)" << std::endl;
+    std::cout << "upload " << perf.upload
+        << " equalize " << perf.equalize
+        << " disparity " << perf.disparity
+        << " denoise " << perf.denoise
+        << " download " << perf.download
+        << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
+        << std::endl;
+
+    //for (auto i = 0; i < output.size(); i++) output_img[i] = input_l[i];
+    //Core::writeImagePGM(output_sad_path + "_DBG_hist.pgm", output_img, width, height);
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) max_disparity;
     Core::writeImagePGM(output_sad_path, output_img, width, height);
 
-    disparity.compute(input_l.data(), input_r.data(), output.data(), width, height, CLDisparityTypeNCC, max_disparity, window_size, &perf);
+    disparity.compute({
+        input_l.data(),
+        input_r.data(),
+        output.data(),
+        width,
+        height,
+        CLDisparityTypeNCC,
+        max_disparity,
+        window_size,
+        true,
+        denoise_radius,
+        &perf
+    });
 
-    std::cout << "Took " << perf.compute << " (" << perf.overhead << " overhead)" << std::endl;
+    std::cout << "upload " << perf.upload
+              << " equalize " << perf.equalize
+              << " disparity " << perf.disparity
+              << " denoise " << perf.denoise
+              << " download " << perf.download
+              << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
+              << std::endl;
+
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) max_disparity;
     Core::writeImagePGM(output_ncc_path, output_img, width, height);

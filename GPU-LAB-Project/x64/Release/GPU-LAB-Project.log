@@ -1,0 +1,19 @@
+﻿  GPU-LAB-Project.cpp
+D:\INFOTECH\2nd Semester\High Performance Programming with graphic cards\Project\GPU-LAB-Project\GPU-LAB-Project\GPU-LAB-Project.cpp(42,27): warning C4018: '<': signed/unsigned mismatch
+D:\INFOTECH\2nd Semester\High Performance Programming with graphic cards\Project\GPU-LAB-Project\GPU-LAB-Project\GPU-LAB-Project.cpp(44,31): warning C4018: '<': signed/unsigned mismatch
+D:\INFOTECH\2nd Semester\High Performance Programming with graphic cards\Project\GPU-LAB-Project\GPU-LAB-Project\GPU-LAB-Project.cpp(83,29): warning C4244: 'initializing': conversion from '_Tp' to 'int', possible loss of data
+          with
+          [
+              _Tp=double
+          ]
+D:\INFOTECH\2nd Semester\High Performance Programming with graphic cards\Project\GPU-LAB-Project\GPU-LAB-Project\GPU-LAB-Project.cpp(192): message : see reference to function template instantiation 'tt SAD_disparity<cv::Mat>(tt,tt,tt)' being compiled
+          with
+          [
+              tt=cv::Mat
+          ]
+  Generating code
+  1 of 241 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    3 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  GPU-LAB-Project.vcxproj -> D:\INFOTECH\2nd Semester\High Performance Programming with graphic cards\Project\GPU-LAB-Project\x64\Release\GPU-LAB-Project.exe

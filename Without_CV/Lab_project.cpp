@@ -1,5 +1,7 @@
 
 #include "vec_operation.h"
+#include <windows.h>
+#pragma comment(lib, "user32.lib")
 
 int main(int argc, char** argv) {
 
@@ -8,6 +10,11 @@ int main(int argc, char** argv) {
 	//	exit(1);
 	}
 
+	SYSTEM_INFO siSysInfo;
+
+	// Copy the hardware information to the SYSTEM_INFO structure. 
+
+	GetSystemInfo(&siSysInfo);
 
 	std::string input_path = "../../../images/";	//Path for image directory ends with/ // argv[1];
 	int idx = -1;	//golobal index for total number of files is directory
@@ -65,51 +72,47 @@ int main(int argc, char** argv) {
 
 	std::vector<std::string> performance;
 
-	auto hist_start = std::chrono::high_resolution_clock::now();
-	std::thread t1(&filter::histogram, &filter, std::ref(inputData_L), std::ref(imageE));
-	std::thread t2(&filter::histogram, &filter, std::ref(inputData_R), std::ref(imageH));
-	t1.join();
-	t2.join();
-	auto hist_end = std::chrono::high_resolution_clock::now();
-	auto hist_time = std::chrono::duration_cast<std::chrono::milliseconds>(hist_end - hist_start).count();
-
-	std::thread t3(&stereo::load_images, &stereo, std::ref(imageE), std::ref(imageL), inputWidth, inputHeight);
-	std::thread t4(&stereo::load_images, &stereo, std::ref(imageH), std::ref(imageR), inputWidth, inputHeight);
-	t3.join();
-	t4.join();
+	PerfTime hist_l, hist_r;
 
 
-	auto sad_start = std::chrono::high_resolution_clock::now();
-	stereo.SAD_disparity<std::vector<float>>(imageL, imageR, image_sad, countX, countY);	//SAD Disparity Calculation
-	auto sad_end = std::chrono::high_resolution_clock::now();
-	auto sad_time = std::chrono::duration_cast<std::chrono::milliseconds>(sad_end - sad_start).count();
+	std::thread thistL(&filter::histogram, &filter, std::ref(inputData_L), std::ref(imageE), &hist_l);
+	std::thread thistR(&filter::histogram, &filter, std::ref(inputData_R), std::ref(imageH), &hist_r);
+	thistL.join();
+	thistR.join();
 
-	std::thread t5(&stereo::NCC_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_ncc), countX, countY);
+	auto hist_time = hist_l + hist_r;
 
-	std::thread t6(&filter::median_fltr, &filter, std::ref(image_sad), std::ref(imageM_sad), median_mask, countX, countY);
+	std::thread tLdL(&stereo::load_images, &stereo, std::ref(imageE), std::ref(imageL), inputWidth, inputHeight);
+	std::thread tLdR(&stereo::load_images, &stereo, std::ref(imageH), std::ref(imageR), inputWidth, inputHeight);
+	tLdL.join();
+	tLdR.join();
 
+	PerfTime sad_time, ncc_time;
 
+	std::thread tsad(&stereo::SAD_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_sad), countX, countY, &sad_time);
+	std::thread tncc(&stereo::NCC_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_ncc), countX, countY, &ncc_time);
+	tsad.join();
+	tncc.join();
 
-	auto ncc_start = std::chrono::high_resolution_clock::now();
-	t5.join();
-	auto ncc_end = std::chrono::high_resolution_clock::now();
-	auto ncc_time = std::chrono::duration_cast<std::chrono::milliseconds>(ncc_end - ncc_start).count();
+	PerfTime sad_med_time, ncc_med_time;
+	std::thread tmsad(&filter::median_fltr, &filter, std::ref(image_sad), std::ref(imageM_sad), median_mask, countX, countY, &sad_med_time);
+	std::thread tmncc(&filter::median_fltr, &filter, std::ref(image_ncc), std::ref(imageM_ncc), median_mask, countX, countY, &ncc_med_time);
+	tmsad.join();
+	tmncc.join();
+	auto med_time = sad_med_time + ncc_med_time;
 
-
-
-	std::thread t7(&filter::median_fltr, &filter, std::ref(image_ncc), std::ref(imageM_ncc), median_mask, countX, countY);
-
-	auto med_start = std::chrono::high_resolution_clock::now();
-	t6.join();
-	t7.join();
-	auto med_end = std::chrono::high_resolution_clock::now();
-	auto med_time = std::chrono::duration_cast<std::chrono::milliseconds>(med_end - med_start).count();
 
 	Core::writeImagePGM(sad_out_path, image_sad, countX, countY);
 	Core::writeImagePGM(ncc_out_path, image_ncc, countX, countY);
 	Core::writeImagePGM(med_sad_out_path, imageM_sad, countX, countY);
 	Core::writeImagePGM(med_ncc_out_path, imageM_ncc, countX, countY);
 
+	
+	performance.push_back("[CPU INFORMATION]");
+	performance.push_back("OEM ID: " + std::to_string(siSysInfo.dwOemId));
+	performance.push_back("Number of processors: " + std::to_string(siSysInfo.dwNumberOfProcessors));
+	performance.push_back("Page size: " + std::to_string(siSysInfo.dwPageSize));
+	performance.push_back("Processor type:" + std::to_string(siSysInfo.dwProcessorType));
 	performance.push_back("[CPU] Histogram Execution Time: " + std::to_string(hist_time) + "ms");
 	performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
 	performance.push_back("[CPU] NCC Execution Time: " + std::to_string(ncc_time) + "ms");

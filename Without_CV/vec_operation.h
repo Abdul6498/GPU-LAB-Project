@@ -26,6 +26,12 @@
 #define GetValue(x) std::cin >> x ;
 #define line(x) std::cout << x;
 
+#define PERF_BEGIN auto P_start_time = std::chrono::high_resolution_clock::now();
+#define PERF_END(x) auto P_end_time = std::chrono::high_resolution_clock::now(); \
+	if (x != nullptr) *x = std::chrono::duration_cast<std::chrono::milliseconds>(P_end_time - P_start_time).count();
+
+typedef long long PerfTime;
+
 namespace vec {
 
 	/*
@@ -193,19 +199,18 @@ class filter
 private:
 	float m_median = 0;
 public:
-	std::vector<float> histogram(std::vector<float>& image, std::vector<float>& imageE);
-	std::vector<float> median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY);
+	std::vector<float> histogram(std::vector<float>& image, std::vector<float>& imageE, PerfTime* perf_out = nullptr);
+	std::vector<float> median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY, PerfTime* perf_out = nullptr);
 };
 
 class stereo
 {
 private:
-	float sum = 0;
-	float disparity = 0;
-	int pos = 0;
+	
+	
 public:
 	size_t window = 10;
-	float disp_est = 0;
+	
 	int dmax = 50;
 	/*
 	* Find Indexes:
@@ -231,7 +236,7 @@ public:
 	* countY: Height  or number of rows in image
 	*/
 	template<typename tt>
-	tt NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY);
+	tt NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY, PerfTime* perf_out = nullptr);
 
 	/*
 	* Compute Sum of Absolute difference disparity
@@ -242,13 +247,14 @@ public:
 	* countY: Height  or number of rows in image
 	*/
 	template<typename tt>
-	tt SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY);
+	tt SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY, PerfTime* perf_out = nullptr);
 };
 
 //Compute Sum of Absolute Difference and Disparity map
 template<typename tt>
-tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
+tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY, PerfTime* perf_out)
 {
+	PERF_BEGIN
 	LOG("SAD Processing started...........");
 	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;	
@@ -257,6 +263,9 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> diff(count);
 	float* sad_val = new float[countX];
 	int best_match = 0;
+	float sum = 0;
+	float disparity = 0;
+	float disp_est = 0;
 
 	for (int i = dmax; i < (int)countX; i++) {
 		for (int j = 0; j < (int)countY; j++) {
@@ -275,21 +284,23 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 			}
 			//Find Sub pixel for better localization
 			disp_est = disparity - 0.5 * ( (sad_val[best_match + 1] - sad_val[best_match - 1]) / 
-										(sad_val[best_match - 1] - (2 * sad_val[best_match]) + sad_val[best_match + 1]));
+								(sad_val[best_match - 1] - (2 * sad_val[best_match]) + sad_val[best_match + 1]));
 			auto disp_est1 = vec::map_value(src, dst, disp_est);
 			disp_img[vec::getIndexGlobal(countX, i, j)] = disp_est1;
 
 		}
 
 	}
+	PERF_END(perf_out)
 	LOG("SAD Processing Completed");
 	return disp_img;
 }
 
 //Compute Normalized cross Correlation and Disparity map
 template<typename tt>
-tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY)
+tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int countY, PerfTime* perf_out)
 {
+	PERF_BEGIN
 	LOG("NCC Processing started...........");
 	std::pair<float, float> src(0, dmax), dst(0, 1);
 	std::size_t count = window * window;
@@ -301,6 +312,10 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> prod(count);
 	float* ncc_val = new float[countX];
 	int best_match = 0;
+	float sum = 0;
+	float disparity = 0;
+	float disp_est = 0;
+
 	for (int i = dmax; i < (int)countX; i++)
 	{
 		for (int j = 0; j < (int)countY; j++)
@@ -330,5 +345,6 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 		}
 	}
 	LOG("NCC Processing Completed");
+	PERF_END(perf_out)
 	return disp_img;
 }

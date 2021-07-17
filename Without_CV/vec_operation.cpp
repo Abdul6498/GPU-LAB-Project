@@ -61,6 +61,7 @@ int stereo::find_idx(std::string& str, std::string& s)
 {
 
 	bool flag = false;
+	int pos = 0;
 	for (int i = 0; i < str.length(); i++) {
 		if (str.substr(i, s.length()) == s) {
 			pos = i;
@@ -75,6 +76,7 @@ int stereo::find_idx(std::string& str, std::string& s)
 
 int stereo::load_files(std::string path, std::vector < std::string >& filename) {
 	int i = 0;
+	int pos = 0;
 	for (auto& entry : std::filesystem::directory_iterator(path))
 	{
 		std::string path_string{ entry.path().u8string() };
@@ -98,8 +100,9 @@ std::vector<float> stereo::load_images(std::vector<float>& image_in, std::vector
 	return image_out;
 }
 
-std::vector<float> filter::histogram(std::vector<float>& image, std::vector<float>& imageE) {
-
+std::vector<float> filter::histogram(std::vector<float>& image, std::vector<float>& imageE, PerfTime* perf_out)
+{
+	PERF_BEGIN
 	std::vector<uint8_t> grey_image = vec::scaler_multiply(image, 255);
 	int grey_values[256] = { 0 };
 	float PDF[256] = { 0 };
@@ -119,11 +122,13 @@ std::vector<float> filter::histogram(std::vector<float>& image, std::vector<floa
 	for (int i = 0; i < grey_image.size(); i++)
 		imageE[i] = float(CDF[grey_image[i]]);
 	Core::writeImagePGM("hist.pgm", imageE, 450, 375);
+	PERF_END(perf_out)
 	return imageE;
 }
 
 
-std::vector<float> filter::median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY) {
+std::vector<float> filter::median_fltr(std::vector<float>& image, std::vector<float>& image_out, size_t size, size_t countX, size_t countY, PerfTime* perf_out) {
+	PERF_BEGIN;
 	LOG("Median");
 	vec::clone(image, image_out);
 	std::size_t count = size * size;
@@ -136,6 +141,6 @@ std::vector<float> filter::median_fltr(std::vector<float>& image, std::vector<fl
 			image_out[vec::getIndexGlobal(countX, i+1, j+1)] = m_median;
 		}
 	}
-
+	PERF_END(perf_out)
 	return image_out;
 }

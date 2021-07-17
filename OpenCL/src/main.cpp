@@ -73,52 +73,49 @@ int main(int argc, char** argv) {
 
     std::vector<std::string> performance;
 
-    auto hist_start = std::chrono::high_resolution_clock::now();
-    std::thread t1(&filter::histogram, &filter, std::ref(inputData_L), std::ref(image_eq_l));
-    std::thread t2(&filter::histogram, &filter, std::ref(inputData_R), std::ref(image_eq_r));
+    PerfTime hist_l, hist_r;
+    std::thread t1(&filter::histogram, &filter, std::ref(inputData_L), std::ref(image_eq_l), &hist_l);
+    std::thread t2(&filter::histogram, &filter, std::ref(inputData_R), std::ref(image_eq_r), &hist_r);
     t1.join();
     t2.join();
-    auto hist_end = std::chrono::high_resolution_clock::now();
-    auto hist_time = std::chrono::duration_cast<std::chrono::milliseconds>(hist_end - hist_start).count();
+    auto hist_time = hist_l + hist_r;
 
     std::thread t3(&stereo::load_images, &stereo, std::ref(image_eq_l), std::ref(imageL), inputWidth, inputHeight);
     std::thread t4(&stereo::load_images, &stereo, std::ref(image_eq_r), std::ref(imageR), inputWidth, inputHeight);
     t3.join();
     t4.join();
 
-    auto sad_start = std::chrono::high_resolution_clock::now();
-    stereo.SAD_disparity<std::vector<float>>(imageL, imageR, image_sad, countX, countY);	//SAD Disparity Calculation
-    auto sad_end = std::chrono::high_resolution_clock::now();
-    auto sad_time = std::chrono::duration_cast<std::chrono::milliseconds>(sad_end - sad_start).count();
+    PerfTime sad_time, ncc_time;
+    std::thread t_sad(&stereo::SAD_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_sad), countX, countY, &sad_time);
+    std::thread t_ncc(&stereo::NCC_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_ncc), countX, countY, &ncc_time);
+    t_sad.join();
+    t_ncc.join();
 
-    std::thread t5(&stereo::NCC_disparity<std::vector<float>>, &stereo, std::ref(imageL), std::ref(imageR), std::ref(image_ncc), countX, countY);
-
-    std::thread t6(&filter::median_fltr, &filter, std::ref(image_sad), std::ref(imageM_sad), median_size, countX, countY);
-
-    auto ncc_start = std::chrono::high_resolution_clock::now();
-    t5.join();
-    auto ncc_end = std::chrono::high_resolution_clock::now();
-    auto ncc_time = std::chrono::duration_cast<std::chrono::milliseconds>(ncc_end - ncc_start).count();
-
-    std::thread t7(&filter::median_fltr, &filter, std::ref(image_ncc), std::ref(imageM_ncc), median_size, countX, countY);
-
-    auto med_start = std::chrono::high_resolution_clock::now();
-    t6.join();
-    t7.join();
-    auto med_end = std::chrono::high_resolution_clock::now();
-    auto med_time = std::chrono::duration_cast<std::chrono::milliseconds>(med_end - med_start).count();
+    PerfTime sad_med_time, ncc_med_time;
+    std::thread t_msad(&filter::median_fltr, &filter, std::ref(image_sad), std::ref(imageM_sad), median_size, countX, countY, &sad_med_time);
+    std::thread t_mncc(&filter::median_fltr, &filter, std::ref(image_ncc), std::ref(imageM_ncc), median_size, countX, countY, &ncc_med_time);
+    t_msad.join();
+    t_mncc.join();
+    auto med_time = sad_med_time + ncc_med_time;
 
     Core::writeImagePGM(cpu_sad_out_path, image_sad, countX, countY);
     Core::writeImagePGM(cpu_ncc_out_path, image_ncc, countX, countY);
     Core::writeImagePGM(cpu_med_sad_out_path, imageM_sad, countX, countY);
     Core::writeImagePGM(cpu_med_ncc_out_path, imageM_ncc, countX, countY);
 
+    performance.push_back("[CPU] Histogram Execution Time: " + std::to_string(hist_time) + "ms");
+    performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
+    performance.push_back("[CPU] NCC Execution Time: " + std::to_string(ncc_time) + "ms");
+    performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+
+    performance.push_back(" --- ");
+
     std::vector<short> output;
     output.resize(countX * countY);
     std::vector<float> output_img;
     output_img.resize(countX * countY);
 
-    CLDisparityPerfData perf;
+    CLDisparityPerfData perf_sad, perf_ncc;
 
     auto disparity = CLDisparity();
     CLDisparityComputeInput dci = {
@@ -130,55 +127,54 @@ int main(int argc, char** argv) {
         CLDisparityTypeSAD,
         (short) stereo.dmax,
         (short) stereo.window,
-        false, // broken :(
+        // GPU equalization is broken :(
+        // - so we just use the equalized image from the cpu
+        false,
         (short) median_radius,
-        &perf
+        &perf_sad
     };
     disparity.compute(dci);
 
-    std::cout << "upload " << perf.upload
-        << " equalize " << perf.equalize
-        << " disparity " << perf.disparity
-        << " denoise " << perf.denoise
-        << " download " << perf.download
-        << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
-        << std::endl;
-    performance.push_back("[GPU] [SAD] Upload Time: " + std::to_string(perf.upload) + "ms");
-    performance.push_back("[GPU] [SAD] Equlization Execution Time: " + std::to_string(perf.equalize) + "ms");
-    performance.push_back("[GPU] [SAD] Disparity Execution Time: " + std::to_string(perf.disparity) + "ms");
-    performance.push_back("[GPU] [SAD] Denosing Time: " + std::to_string(perf.denoise) + "ms");
-    performance.push_back("[GPU] [SAD] Download Time: " + std::to_string(perf.download) + "ms");
-    performance.push_back("[GPU] [SAD] Total Time: " + std::to_string(perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download) + "ms");
+    performance.push_back("[GPU] [SAD] Upload Time: " + perf_sad.upload.toString(true));
+    performance.push_back("[GPU] [SAD] Equalization Execution Time: " + perf_sad.equalize.toString(true));
+    performance.push_back("[GPU] [SAD] Disparity Execution Time: " + perf_sad.disparity.toString(true));
+    performance.push_back("[GPU] [SAD] Denoising Time: " + perf_sad.denoise.toString(true));
+    performance.push_back("[GPU] [SAD] Download Time: " + perf_sad.download.toString(true));
+    auto time_gpu_total_sad = perf_sad.upload + perf_sad.equalize + perf_sad.disparity + perf_sad.denoise + perf_sad.download;
+    performance.push_back("[GPU] [SAD] Total Time: " + time_gpu_total_sad.toString(true));
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) stereo.dmax;
     Core::writeImagePGM(gpu_med_sad_out_path, output_img, countX, countY);
 
     dci.type = CLDisparityTypeNCC;
+    dci.perf_out = &perf_ncc;
     disparity.compute(dci);
 
-    std::cout << "upload " << perf.upload
-              << " equalize " << perf.equalize
-              << " disparity " << perf.disparity
-              << " denoise " << perf.denoise
-              << " download " << perf.download
-              << " -- total " << (perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download)
-              << std::endl;
-
-    performance.push_back("[GPU] [NCC] Upload Time: " + std::to_string(perf.upload) + "ms");
-    performance.push_back("[GPU] [NCC] Equlization Execution Time: " + std::to_string(perf.equalize) + "ms");
-    performance.push_back("[GPU] [NCC] Disparity Execution Time: " + std::to_string(perf.disparity) + "ms");
-    performance.push_back("[GPU] [NCC] Denosing Time: " + std::to_string(perf.denoise) + "ms");
-    performance.push_back("[GPU] [NCC] Download Time: " + std::to_string(perf.download) + "ms");
-    performance.push_back("[GPU] [NCC] Total Time: " + std::to_string(perf.upload + perf.equalize + perf.disparity + perf.denoise + perf.download) + "ms");
+    performance.push_back("[GPU] [NCC] Upload Time: " + perf_ncc.upload.toString(true));
+    performance.push_back("[GPU] [NCC] Equalization Execution Time: " + perf_ncc.equalize.toString(true));
+    performance.push_back("[GPU] [NCC] Disparity Execution Time: " + perf_ncc.disparity.toString(true));
+    performance.push_back("[GPU] [NCC] Denoising Time: " + perf_ncc.denoise.toString(true));
+    performance.push_back("[GPU] [NCC] Download Time: " + perf_ncc.download.toString(true));
+    auto time_gpu_total_ncc = perf_ncc.upload + perf_ncc.equalize + perf_ncc.disparity + perf_ncc.denoise + perf_ncc.download;
+    performance.push_back("[GPU] [NCC] Total Time: " + time_gpu_total_ncc.toString(true));
 
     for (auto i = 0; i < output.size(); i++) output_img[i] = ((float) output[i]) / (float) stereo.dmax;
     Core::writeImagePGM(gpu_med_ncc_out_path, output_img, countX, countY);
 
-    // TODO: print performance info
-    performance.push_back("[CPU] Histogram Execution Time: " + std::to_string(hist_time) + "ms");
-    performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
-    performance.push_back("[CPU] NCC Execution Time: " + std::to_string(ncc_time) + "ms");
-    performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+    performance.push_back(" --- ");
+
+    // because the GPU doesn't perform histogram equalization, we won't consider it for this total
+    auto sad_time_total = sad_time + sad_med_time;
+    auto ncc_time_total = ncc_time + ncc_med_time;
+
+    auto speed_fac_sad = double(sad_time) / perf_sad.disparity.getMilliseconds();
+    auto speed_fac_ncc = double(ncc_time) / perf_ncc.disparity.getMilliseconds();
+    auto speed_fac_o_sad = double(sad_time_total) / time_gpu_total_sad.getMilliseconds();
+    auto speed_fac_o_ncc = double(ncc_time_total) / time_gpu_total_ncc.getMilliseconds();
+    performance.push_back("[SAD] GPU speedup: " + std::to_string(speed_fac_sad));
+    performance.push_back("[SAD] GPU speedup (+overhead): " + std::to_string(speed_fac_o_sad));
+    performance.push_back("[NCC] GPU speedup: " + std::to_string(speed_fac_ncc));
+    performance.push_back("[NCC] GPU speedup (+overhead): " + std::to_string(speed_fac_o_ncc));
 
     vec::print_performance(performance);
 }

@@ -8,9 +8,13 @@ CLDisparity::CLDisparity() {
     for (const auto& d : available_devices) {
         int cu = d.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         if (cu > highestCU) {
+            auto device_name = d.getInfo<CL_DEVICE_NAME>();
+            if (device_name.find("AMD Radeon") != std::string::npos && device_name.find("Compute Engine") != std::string::npos) {
+                std::cerr << "Ignoring AMD Radeon Compute Engine because the compute kernel crashes macOS" << std::endl;
+                continue;
+            }
             device = d;
             highestCU = cu;
-            break; // remove this on computers where it doesn't crash
         }
     }
     if (!highestCU) throw "no CL devices found!";

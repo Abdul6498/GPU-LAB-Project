@@ -178,67 +178,126 @@ void load_images(const cv::String& dirname, std::vector< cv::Mat >& img_lst)
 cv::Mat myMedian(cv::Mat& srcImage)
 {
     cv::Mat dstImage = srcImage.clone();
-    // Define a vector list
         std::vector<uchar>List;
-    // Traverse the image source
         for (int k = 1; k < srcImage.cols - 1; k++)
         {
             for (int n = 1; n < srcImage.rows - 1; n++) {
 
-                // Traversing the template window
                     for (int i = -1; i <= 1; i++)
                     {
                         for (int j = -1; j <= 1; j++)
                         {
-                            // Put the pixels in the window into the vector
                                 List.push_back(srcImage.at<uchar>(n + j, k + i));
                         }
                     }
-                // Sort the elements in the window
                     sort(List.begin(), List.end());
-                // Take the middle element of the vector as the current element
                     dstImage.at<uchar>(n, k) = List[5];
-                // Clear the elements in the current vector
                     List.clear();
             }
         }
     return dstImage;
 }
+void print_performance(std::vector<std::string>& performance)
+{
+
+    for (int i = 0; i < performance.size(); i++) {
+        LOG(performance[i]);
+    }
+}
 int main()
 {
     cv::Mat imageL = cv::imread("im2.png");
     cv::Mat imageR = cv::imread("im6.png");
+    std::vector<std::string> performance;
+
     cv::cvtColor(imageL, imageL, cv::COLOR_BGR2GRAY);
     cv::cvtColor(imageR, imageR, cv::COLOR_BGR2GRAY);
     // imageL = average_fn(imageL);               //Take average
     // imageR = average_fn(imageR);
     // imageL = affine_t<cv::Mat>(imageL);
     // imageR = affine_t<cv::Mat>(imageR);
+    auto hist_start = std::chrono::high_resolution_clock::now();
     cv::equalizeHist(imageL, imageL);
-    cv::imwrite("Hist.pgm", imageL);
     cv::equalizeHist(imageR, imageR);
+    auto hist_end = std::chrono::high_resolution_clock::now();
+    auto hist_time = std::chrono::duration_cast<std::chrono::milliseconds>(hist_end - hist_start).count();
+
     int op = -1;
-    LOG("Option [1]: SAD \nOption [2]: NCC \nOption [3]: Compare Peformance of Both");
+    LOG("Option [1]: SAD \nOption [2]: NCC \nOption [3]: SAD and NCC Both");
     line("Please choose option: ");
     GetValue(op);
-    cv::Mat M = cv::Mat::zeros(imageL.rows, imageL.cols, CV_8UC1);
-    auto start = std::chrono::high_resolution_clock::now();
-    if (op == 1)
-        SAD_disparity<cv::Mat>(imageL, imageR, M);
-    else if (op == 2)
-        NCC_disparity<cv::Mat>(imageL, imageR, M);
+    cv::Mat SAD_out = cv::Mat::zeros(imageL.rows, imageL.cols, CV_8UC1);
+    cv::Mat NCC_out = cv::Mat::zeros(imageL.rows, imageL.cols, CV_8UC1);
+
+
+    if (op == 1) {
+        auto start = std::chrono::high_resolution_clock::now();
+        SAD_disparity<cv::Mat>(imageL, imageR, SAD_out);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto sad_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();	// milliseconds
+        
+        auto med_start = std::chrono::high_resolution_clock::now();
+        cv::Mat SAD_out_M = myMedian(SAD_out);
+        auto med_end = std::chrono::high_resolution_clock::now();
+        auto med_time = std::chrono::duration_cast<std::chrono::milliseconds>(med_end - med_start).count();
+
+        performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
+        performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+        print_performance(performance);
+        cv::imshow("SAD output", SAD_out);
+        cv::imshow("SAD output With Median", SAD_out_M);
+    }
+    else if (op == 2) {
+        auto start = std::chrono::high_resolution_clock::now();
+        NCC_disparity<cv::Mat>(imageL, imageR, NCC_out);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto ncc_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();	// milliseconds
+
+        auto med_start = std::chrono::high_resolution_clock::now();
+        cv::Mat NCC_out_M = myMedian(NCC_out);
+        auto med_end = std::chrono::high_resolution_clock::now();
+        auto med_time = std::chrono::duration_cast<std::chrono::milliseconds>(med_end - med_start).count();
+
+        performance.push_back("[CPU] SAD Execution Time: " + std::to_string(ncc_time) + "ms");
+        performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+        print_performance(performance);
+        cv::imshow("NCC output", NCC_out);
+        cv::imshow("NCC output With Median", NCC_out_M);
+    }
+        
+    else if (op == 3)
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+        SAD_disparity<cv::Mat>(imageL, imageR, SAD_out);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto sad_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();	// milliseconds
+
+        start = std::chrono::high_resolution_clock::now();
+        NCC_disparity<cv::Mat>(imageL, imageR, NCC_out);
+        end = std::chrono::high_resolution_clock::now();
+        auto ncc_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();	// milliseconds
+
+        auto med_start = std::chrono::high_resolution_clock::now();
+        cv::Mat SAD_out_M = myMedian(SAD_out);
+        cv::Mat NCC_out_M = myMedian(NCC_out);
+        auto med_end = std::chrono::high_resolution_clock::now();
+        auto med_time = std::chrono::duration_cast<std::chrono::milliseconds>(med_end - med_start).count();
+
+        performance.push_back("[CPU] SAD Execution Time: " + std::to_string(sad_time) + "ms");
+        performance.push_back("[CPU] NCC Execution Time: " + std::to_string(ncc_time) + "ms");
+        performance.push_back("[CPU] Median Execution Time: " + std::to_string(med_time) + "ms");
+        print_performance(performance);
+        cv::imshow("SAD output", SAD_out);
+        cv::imshow("SAD output With Median", SAD_out_M);
+
+        cv::imshow("NCC output", NCC_out);
+        cv::imshow("NCC output With Median", NCC_out_M);
+    }
     else
         std::cerr << "Please choose correct option \n";
-    //SAD_disparity<cv::Mat>(imageL, imageR, M);
-    //NCC_disparity<cv::Mat>(imageL, imageR, M);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto tm = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);	// milliseconds
-    std::cout << "time: " << tm.count() << " ms" << std::endl;
-    cv::imshow("Without Median", M);
-    cv::Mat dst = myMedian(M);
+
+
     LOG("Completed");
-    cv::imshow("With Median", dst);
-    cv::imwrite("output_SAD.bmp", M);
     int k = cv::waitKey(0); // Wait for a keystroke in the window
     if (k == 's')
     {

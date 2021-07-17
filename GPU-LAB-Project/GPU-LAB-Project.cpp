@@ -64,7 +64,7 @@ cv::Mat average_fn(cv::Mat img_in)
         }
     }
     return img_in;
-    // process_images(img_in);   //Process the images without saving(Optional)//Don't uncomment without the permission of Author. 
+    
 }
 
 template<typename tt>
@@ -84,16 +84,9 @@ tt SAD_disparity(tt imageL, tt imageR, tt disp_img)
                 if (min > abs_sum) {
                     min = abs_sum;
                     disparity = x - t;
-                    //  point_x = x;
-                    //  point_t = t;
                 }
             }
-            // sum = 0;
-           //  for (int p_x = point_x; p_x < 3; p_x++)
-           //  {
-               //  sum = int(imageL.at<uchar>(cv::Point(p_x, y))) + sum;
-               //  cog = sum / 3;
-           //  }
+            
             disparity = map_value(src, dst, disparity);
             disp_img.at<uchar>(cv::Point(x, y)) = disparity;
         }
@@ -127,16 +120,9 @@ ncc NCC_disparity(ncc imageL, ncc imageR, ncc disp_img)
                 if (norm > max) {
                     max = norm;
                     disparity = x - t;
-                    //  point_x = x;
-                    //  point_t = t;
                 }
             }
-            // sum = 0;
-           //  for (int p_x = point_x; p_x < 3; p_x++)
-           //  {
-               //  sum = int(imageL.at<uchar>(cv::Point(p_x, y))) + sum;
-               //  cog = sum / 3;
-           //  }
+
             disparity = map_value(src, dst, disparity);
             disp_img.at<uchar>(cv::Point(x, y)) = disparity;
         }
@@ -187,10 +173,10 @@ int main()
     cv::equalizeHist(imageR, imageR);
 
     cv::Mat M = cv::Mat::zeros(imageL.rows, imageL.cols, CV_8UC1);
-    auto start = std::chrono::high_resolution_clock::now();
 
+    auto start = std::chrono::high_resolution_clock::now();
     SAD_disparity<cv::Mat>(imageL, imageR, M);
-    //NCC_disparity<cv::Mat>(imageL, imageR, M);
+    NCC_disparity<cv::Mat>(imageL, imageR, M);
     auto end = std::chrono::high_resolution_clock::now();
     auto tm = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);	// milliseconds
     std::cout << "time: " << tm.count() << " ms" << std::endl;

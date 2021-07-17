@@ -205,13 +205,8 @@ public:
 
 class stereo
 {
-private:
-	float sum = 0;
-	float disparity = 0;
-	int pos = 0;
 public:
 	size_t window = 10;
-	float disp_est = 0;
 	int dmax = 50;
 	/*
 	* Find Indexes:
@@ -264,6 +259,9 @@ tt stereo::SAD_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> diff(count);
 	float* sad_val = new float[countX];
 	int best_match = 0;
+    float sum = 0;
+    float disparity = 0;
+    float disp_est = 0;
 
 	for (int i = dmax; i < (int)countX; i++) {
 		for (int j = 0; j < (int)countY; j++) {
@@ -310,6 +308,9 @@ tt stereo::NCC_disparity(tt& imageL, tt& imageR, tt& disp_img, int countX, int c
 	std::vector<float> prod(count);
 	float* ncc_val = new float[countX];
 	int best_match = 0;
+    float disparity = 0;
+    float disp_est = 0;
+
 	for (int i = dmax; i < (int)countX; i++)
 	{
 		for (int j = 0; j < (int)countY; j++)

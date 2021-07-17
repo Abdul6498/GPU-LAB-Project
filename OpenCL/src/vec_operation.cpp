@@ -59,7 +59,7 @@ namespace vec {
 }
 int stereo::find_idx(std::string& str, std::string& s)
 {
-
+    int pos = 0;
 	bool flag = false;
 	for (int i = 0; i < str.length(); i++) {
 		if (str.substr(i, s.length()) == s) {
@@ -74,6 +74,7 @@ int stereo::find_idx(std::string& str, std::string& s)
 }
 
 int stereo::load_files(std::string path, std::vector < std::string >& filename) {
+    int pos = 0;
 	int i = 0;
 	for (auto& entry : std::filesystem::directory_iterator(path))
 	{

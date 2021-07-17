@@ -1,4 +1,5 @@
 # GPU-LAB-Project
+```bash
 Output:
 Index# 0 im2.pgm
 Index# 1 im6.pgm
@@ -24,3 +25,4 @@ Processor type:8664
 [CPU] NCC Execution Time: 3122ms
 [CPU] Median Execution Time: 391ms
 Completed
+```

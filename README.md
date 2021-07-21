@@ -1,6 +1,8 @@
-# CPU Implementation
+# GPU LAB Project
 
-This repository contains CPU implementation of the disparity map.
+This repository contains CPU an GPU implementation of the disparity map.
+
+## CPU Implementation
 Two different implementations are performed and compare the performance for both of them.
 In the first implementation, OpenCV is used for preprocessing of images and calculation of disparity map.
 In the second implementation, conventional C++ libraries are used and all the functions are created by the author.
@@ -32,7 +34,7 @@ Moreover, multithreading is used to increase the throughput and decrease the tot
 
 ## OpenCV Implementation:
 ### Usage
-TODO
+Install OpenCV in visual studio and clone GPU-LAB-Project/GPU-LAB-Project repository in the local folder. Import it from visual studio and run the main.cpp file. Make sure that images are also in the same directory. The output will be shown on the screen.
 ### Functions
 The following functions are used for the calculation of the disparity map.
 - Load Images
@@ -61,7 +63,10 @@ The following functions are used for the calculation of the disparity map.
 
 ## Conventional C++ Implementation:
 ### Usage
-Install OpenCV in visual studio and clone GPU-LAB-Project/GPU-LAB-Project repository in the local folder. Import it from visual studio and run the main.cpp file. Make sure that images are also in the same directory. The output will be shown on the screen.
+clone GPU-LAB-Project/Without_CV repository in the local folder. Import it from visual studio and run the Lab_project.cpp file. Make sure that images are in the images directory. You can also change the repository from the code where the images are loaced. The output will be stored in the images directory.
+```cpp
+std::string input_path = "path/to/images/";
+```
 ###Functions
 The following functions are used for the calculation of the disparity map. 
 

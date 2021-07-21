@@ -1,16 +1,16 @@
 /*
  * Copyright (c) 2010-2012 Steffen Kieß
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -169,7 +169,7 @@ namespace Core {
       while ((size = GetModuleFileNameA (NULL, filename.data (), filename.size ())) == filename.size ())
         filename.resize (filename.size () * 2);
       checkWin ("GetModuleFileNameA", size);
-      
+
       return std::string (filename.data (), size);
     }
 #endif
@@ -351,7 +351,7 @@ namespace Core {
       _hasSymbol = false;
       _symbolAddr = NULL;
     } else {
-    
+
       if (info.dli_fname) {
         _hasSharedObject = true;
         _sharedObjectName = info.dli_fname;
@@ -440,7 +440,7 @@ namespace Core {
     if (_inlineStackFrames.size () != 0)
       abort ();
 
-#if OS_WIN
+#if OS_WIN || __APPLE__
     // Not implemented
     _hasAddr2line = true;
     return;
@@ -605,7 +605,7 @@ namespace Core {
         snprintf (buf, sizeof (buf), "addr2line returned %d (beginning of line)", WEXITSTATUS (ret));
         throw SimpleStdException (buf);
       }
-    
+
       if (!noinfo && frames.size () == 0) {
         throw SimpleStdException ("got no data from addr2line\n");
       }
@@ -654,11 +654,11 @@ namespace Core {
 
 #ifdef _WIN64
          "mov %%rsp, %1 \n\t"
-         
+
          "mov %%rbp, %2 \n\t"
 #else
          "mov %%esp, %1 \n\t"
-         
+
          "mov %%ebp, %2 \n\t"
 #endif
          : "=g" (eip),
@@ -666,7 +666,7 @@ namespace Core {
            "=g" (ebp)
          );
 #endif
-    
+
     STACKFRAME frame;
     memset (&frame, 0, sizeof (frame));
     frame.AddrPC.Mode = AddrModeFlat;
@@ -675,7 +675,7 @@ namespace Core {
     frame.AddrStack.Offset = esp;
     frame.AddrFrame.Mode = AddrModeFlat;
     frame.AddrFrame.Offset = ebp;
-    
+
     while (StackWalk (IMAGE_FILE_MACHINE_I386, GetCurrentProcess (), GetCurrentThread (), &frame, NULL, NULL, SymFunctionTableAccess, SymGetModuleBase, NULL)) {
       _frames.push_back (StackFrame ((void*) frame.AddrPC.Offset));
     }

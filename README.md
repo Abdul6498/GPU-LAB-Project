@@ -1,27 +1,26 @@
-```
-Under Construction
-```
 # CPU Implementation
 
-This repository contains CPU implementation of the Disparity map. Two different implementations are performed and compare the performance for both of them. In the first implementation, OpenCV is used for preprocessing of images and calculation of Disparity Map. In the second implementation, conventional C++ libraries are used and all the functions are created by the author. Moreover, Multithreading is used to increase the throughput and decrease the total execution time.
-
+This repository contains CPU implementation of the disparity map.
+Two different implementations are performed and compare the performance for both of them.
+In the first implementation, OpenCV is used for preprocessing of images and calculation of disparity map.
+In the second implementation, conventional C++ libraries are used and all the functions are created by the author.
+Moreover, multithreading is used to increase the throughput and decrease the total execution time.
 
 ## Repository Structure
-``` cpp
-Abdul (Brach)
-├──GPU-LAB-Project (OpenCV Implementation)
-│  ├── app
-│  │    └── main.cpp
-│  ├── im2.pgm
-│  └── im6.pgm 
+```
+├── GPU-LAB-Project (OpenCV Implementation)
+│   ├── app
+│   │    └── main.cpp
+│   ├── im2.pgm
+│   └── im6.pgm 
 └── Without_CV (Conventional C++ Implementation)
-    ├── CMakeLists.txt
+     ├── CMakeLists.txt
     ├── app
-    │   └── Lab_project.cpp
+    │   └── Lab_project.cpp
     ├── include
-    │   └── vec_operation.h
+    │   └── vec_operation.h
     ├── src
-    │   └── vec_operation.cpp
+    │   └── vec_operation.cpp
     └── images
         ├── im2.pgm
         ├── im6.pgm
@@ -30,6 +29,7 @@ Abdul (Brach)
         ├── Median_NCC_out.pgm
         └── Median_SAD_out.pgm
 ```
+
 ## OpenCV Implementation:
 ### Usage
 TODO
@@ -124,9 +124,86 @@ Processor type:8664
 [CPU] Median Execution Time: 391ms
 Completed
 ```
-### Instructions
-### Files
-### References
+
+# OpenCL Implementation
+The OpenCL implementation makes use of the GPU to compute disparity
+and to perform some post-processing tasks.
+
+Both the SAD and NCC kernels perform block matching for each image pixel simultaneously, as neither
+of these approaches appeared to be separable in any way—neither globally or locally per work group.
+However, the NCC kernel does make use of a global cache of neighborhood mean values
+such that they do not need to be recalculated for each matching step.
+
+The OpenCL implementation also includes the CPU implementation from above for comparison.
+
+Relevant files:
+
+- `disparity.cl` contains all OpenCL kernels.
+    - this file also contains parts of a GPU histogram equalization method which unfortunately
+      yields incorrect results we were not able to debug.
+- `cl_disparity.{h,cpp}` contains an API to instantiate and call the kernel.
+
+A notable caveat of the OpenCL implementation is that at least on macOS
+it does not appear to work on an AMD Radeon GPU.
+Attempting to execute the kernel will immediately freeze and crash the macOS window server, and
+possibly the macOS kernel. It should be noted that OpenCL was deprecated on macOS.
+
+Nevertheless, even with an Intel integrated GPU we can see a significant speedup compared to the CPU version.
+
+### Building the project
+```sh
+cd OpenCL
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
+./disparity path/to/folder/with/images
+```
+
+Building has been confirmed to work on Arch Linux and macOS Big Sur.
+Actual execution could only be tested on macOS as we were not able to get OpenCL to work on Linux.
+
+Output log on macOS:
+
+```
+(files not shown)
+Select Left image index: 11
+Select Right image index: 9
+SAD Processing started...........
+NCC Processing started...........
+SAD Processing Completed
+NCC Processing Completed
+Median
+Median
+Ignoring AMD Radeon Compute Engine because the compute kernel crashes macOS
+Running on Intel(R) Iris(TM) Plus Graphics 655
+[CPU] Histogram Execution Time: 2ms
+[CPU] SAD Execution Time: 1605ms
+[CPU] NCC Execution Time: 2604ms
+[CPU] Median Execution Time: 293ms
+ --- 
+[GPU] [SAD] Upload Time: 0.000033s
+[GPU] [SAD] Equalization Execution Time: 0.000000s
+[GPU] [SAD] Disparity Execution Time: 0.015434s
+[GPU] [SAD] Denoising Time: 0.006361s
+[GPU] [SAD] Download Time: 0.000012s
+[GPU] [SAD] Total Time: 0.021840s
+[GPU] [NCC] Upload Time: 0.000034s
+[GPU] [NCC] Equalization Execution Time: 0.000000s
+[GPU] [NCC] Disparity Execution Time: 0.015130s
+[GPU] [NCC] Denoising Time: 0.006662s
+[GPU] [NCC] Download Time: 0.000012s
+[GPU] [NCC] Total Time: 0.021838s
+ --- 
+[SAD] GPU speedup: 103.991188
+[SAD] GPU speedup (+overhead): 80.128205
+[NCC] GPU speedup: 172.108394
+[NCC] GPU speedup (+overhead): 126.018866
+
+Process finished with exit code 0
+```
+
+# References
 1. https://en.wikipedia.org/wiki/Sum_of_absolute_differences
 2. https://vision.middlebury.edu/stereo/data/scenes2003/
 3. https://www.hindawi.com/journals/js/2016/8742920/#EEq3

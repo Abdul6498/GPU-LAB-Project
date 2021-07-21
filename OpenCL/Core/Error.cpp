@@ -27,6 +27,7 @@
 #endif
 
 #include "Error.hpp"
+
 #include <Core/Assert.hpp>
 
 #include <Core/StrError.h>
